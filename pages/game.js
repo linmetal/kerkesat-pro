@@ -60,10 +60,12 @@ export default function Game() {
     if (game) saveGame(game);
   }, [game]);
 
-  // A new screen always starts at the top, however far the last one scrolled.
+  // A new scene always starts at the top, however far the last one scrolled.
+  // On a phone this is the difference between reading the decision and hunting
+  // for it below the panel you were just tapping.
   useEffect(() => {
-    if (phase === 'menu' || phase === 'over') window.scrollTo(0, 0);
-  }, [phase]);
+    window.scrollTo(0, 0);
+  }, [phase, game && game.pending]);
 
   // ------------------------------------------------------------------ actions
   const begin = useCallback(() => {
