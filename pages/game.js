@@ -503,6 +503,8 @@ function Stats({ T, game, view, lang, outcome }) {
         </div>
       </div>
 
+      <Circle T={T} game={game} />
+
       <div className="sep" />
       <Meter label={T.reputation} value={game.rep} />
       <Meter label={T.morale} value={game.morale} />
@@ -518,6 +520,51 @@ function Stats({ T, game, view, lang, outcome }) {
         .foot { margin-top: 16px; font-size: 9px; letter-spacing: 0.12em; color: #33404d; }
       `}</style>
     </div>
+  );
+}
+
+const ROLE_KEY = { cofounder: 'roleCofounder', mentor: 'roleMentor', hand: 'roleHand' };
+
+// The handful of names a career is actually remembered through.
+function Circle({ T, game }) {
+  const people = Object.entries(game.people || {}).filter(([role]) => ROLE_KEY[role]);
+  if (!people.length) return null;
+  return (
+    <>
+      <div className="sep" />
+      <div className="label">{T.circle}</div>
+      <div className="people">
+        {people.map(([role, p]) => (
+          <div className="pr" key={role}>
+            <div className="pr-top">
+              <span className="pn">{p.name}</span>
+              <span className="pl" style={{ color: p.loyalty < 40 ? '#ff6b6b' : p.loyalty > 70 ? '#38e08a' : '#f0b429' }}>
+                {Math.round(p.loyalty)}
+              </span>
+            </div>
+            <div className="pr-role">{T[ROLE_KEY[role]]} · {T.loyalty}</div>
+            <div className="pr-track">
+              <div
+                className="pr-fill"
+                style={{
+                  width: `${Math.max(0, Math.min(100, p.loyalty))}%`,
+                  background: p.loyalty < 40 ? '#ff4d4d' : p.loyalty > 70 ? '#38e08a' : '#f0b429',
+                }}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+      <style jsx>{`
+        .people { display: flex; flex-direction: column; gap: 11px; margin-top: 8px; }
+        .pr-top { display: flex; justify-content: space-between; align-items: baseline; }
+        .pn { font-size: 12px; color: #eef3f8; }
+        .pl { font-size: 11px; }
+        .pr-role { font-size: 9px; letter-spacing: 0.1em; color: #4f5d6c; margin: 3px 0 5px; }
+        .pr-track { height: 3px; background: #131b24; }
+        .pr-fill { height: 100%; transition: width 0.6s cubic-bezier(0.2, 0.8, 0.2, 1); }
+      `}</style>
+    </>
   );
 }
 
@@ -642,6 +689,41 @@ function Outcome({ T, game, outcome, lang, proceed, view }) {
         </div>
       )}
 
+      {game.yearReport && (
+        <div className="annual">
+          <div className="an-top">
+            <span className="an-tag">{T.yearClosed}</span>
+            <span className="an-year">{T.year} {game.yearReport.year}</span>
+          </div>
+          <div className="an-grid">
+            <div>
+              <span className="label">{T.annualRevenue}</span>
+              <b>{fmtMoney(game.yearReport.revenue)}
+                {game.yearReport.revenueGrowth !== null && (
+                  <em style={{ color: game.yearReport.revenueGrowth >= 0 ? '#38e08a' : '#ff6b6b' }}>
+                    {' '}{fmtPct(game.yearReport.revenueGrowth, 0)}
+                  </em>
+                )}
+              </b>
+            </div>
+            <div>
+              <span className="label">{T.annualProfit}</span>
+              <b style={{ color: game.yearReport.profit >= 0 ? '#38e08a' : '#ff6b6b' }}>
+                {fmtMoney(game.yearReport.profit)}
+              </b>
+            </div>
+            <div>
+              <span className="label">{T.nwGain}</span>
+              <b style={{ color: game.yearReport.nwGain >= 0 ? '#38e08a' : '#ff6b6b' }}>
+                {fmtMoney(game.yearReport.nwGain)}
+              </b>
+            </div>
+            <div><span className="label">{T.headcount}</span><b>{game.yearReport.teamSize}</b></div>
+            <div><span className="label">{T.rivalsAlive}</span><b>{game.yearReport.rivals}</b></div>
+          </div>
+        </div>
+      )}
+
       {r && (
         <div className="report">
           <div className="label">{T.quarterReport}</div>
@@ -678,6 +760,17 @@ function Outcome({ T, game, outcome, lang, proceed, view }) {
         }
         .tl { font-size: 9px; letter-spacing: 0.22em; color: #38e08a; margin-bottom: 6px; }
         .tv { font-size: 16px; color: #eef3f8; letter-spacing: 0.04em; }
+        .annual {
+          border: 1px solid #22303e; background: #090e14; padding: 14px 16px; margin: 4px 0 20px;
+          animation: fade 0.5s ease;
+        }
+        .an-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .an-tag { font-size: 9px; letter-spacing: 0.22em; color: #4dabf7; }
+        .an-year { font-size: 9px; letter-spacing: 0.14em; color: #2c3f52; }
+        .an-grid { display: flex; flex-wrap: wrap; gap: 18px 26px; }
+        .an-grid div { display: flex; flex-direction: column; gap: 4px; }
+        .an-grid b { font-size: 13px; font-weight: 500; color: #eef3f8; }
+        .an-grid em { font-style: normal; font-size: 10px; }
         .report { border-top: 1px solid #16202b; padding-top: 16px; margin-top: auto; }
         .rgrid { display: flex; flex-wrap: wrap; gap: 26px; margin-top: 10px; }
         .rgrid div { display: flex; flex-direction: column; gap: 4px; }
@@ -714,7 +807,7 @@ function Market({ T, game, view, lang }) {
         </div>
         {rivals.map((r) => (
           <div className="rv" key={r.id || r.name}>
-            <span className="rn">{r.name}<em>{r.traitName[lang]}</em></span>
+            <span className="rn">{r.name}<em>{r.ceo ? `${r.ceo} · ` : ''}{r.traitName[lang]}</em></span>
             <span className="rvv" style={{ color: r.value > mine ? '#ff6b6b' : '#7b8b9c' }}>
               {fmtMoney(r.value)}
             </span>
